@@ -9,7 +9,7 @@ sock.on("open", function () {
 	sock.send("HelloWorld2");
 	sock.send("HelloWorld3");
 	sock.send("HelloWorld4");
-	sock.send(Buffer.alloc(10));
+	// sock.send(Buffer.alloc(10));
 });
 
 sock.on("error", function(err) {
