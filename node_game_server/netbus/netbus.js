@@ -2,10 +2,12 @@
 const net = require("net");
 const ws = require("ws");
 
-const log = require("../uitls/log");//加载log文件
+const log = require("../uitls/log");            //加载log文件
 const tcppkg = require("./tcppkg");
 
 const proto_mgr = require("./proto_mgr");
+
+const service_mgr = require("./service_mgr");   //服务
 //====end=======
 
 //用户列表信息
@@ -19,10 +21,11 @@ let gloabl_session_key = 1;
 function on_session_exit(session) {
     //打印一下
     log.info("session is close");
-    session.last_pkg = null;//记录数据位置为null
+    service_mgr.on_client_lost_connect(session);            //离开的时候通知模块
+    session.last_pkg = null;                                //记录数据位置为null
     if(global_session_list[session.session_key]){
-        global_session_list[session.session_key] = null;//清理数据
-        delete global_session_list[session.session_key];//删除
+        global_session_list[session.session_key] = null;    //清理数据
+        delete global_session_list[session.session_key];    //删除
         session.session_key = null;
     }
 }
@@ -41,6 +44,9 @@ function session_close(session){
 //解析事件
 function on_session_recv_cmd(session,str_or_buf){
     log.info(str_or_buf);
+    if(!service_mgr.on_rev_clinet_cmd(session,str_or_buf)){
+        session_close(session);
+    }
 }
 
 //有客户端进入
