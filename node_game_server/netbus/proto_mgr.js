@@ -1,8 +1,17 @@
 //对所对应的数据进行解码，编码
 const log = require("../uitls/log");
-const netbus = require("./netbus");
 
-const proto_mgr = {};//表
+//导出表
+const proto_mgr = {
+    PROTO_JSON:1,
+    PROTO_BUF:2,
+    
+    decode_cmd : decode_cmd,
+    encode_cmd : encode_cmd,
+
+    reg_buf_decoder : reg_buf_decoder,
+    reg_buf_encoder : reg_buf_encoder,
+};//表
 
 const decoders = {};//解码集合
 const encoders = {};//编码结合
@@ -40,7 +49,7 @@ function _json_decode(jsonbuf){
 function encode_cmd(proto_type,stype,ctype,body){
     //第一步算总长度
     let buf = null;
-    if(proto_type == netbus.PROTO_JSON){
+    if(proto_type == proto_mgr.PROTO_JSON){
         //如果是json
         buf = _json_encode(stype,ctype,body);
         log.info("encode_cmd=",proto_type,buf);
@@ -58,19 +67,20 @@ function encode_cmd(proto_type,stype,ctype,body){
 //解码
 function decode_cmd(proto_type,body){
     let buf = null;
-    if(proto_type == netbus.PROTO_JSON){
+    if(proto_type == proto_mgr.PROTO_JSON){
         buf = _json_decode(body)
         return buf;
     }
     let stype = body.readUInt16LE(0);//从0开始读取
     let ctype = body.readUInt16LE(2);//从第二个开始读取
     let key  = get_key(stype,ctype);
-
+    
     //没有找到
-    if(decoders[key]){
+    if(!decoders[key]){
         return null;
     }
     buf = decoders[key](body)
+    
     return buf;
 }
 
@@ -94,9 +104,4 @@ function reg_buf_decoder(stype,ctype,encode_fun) {
     decoders[key] = encode_fun;
 }
 
-proto_mgr.decode_cmd = decode_cmd;
-proto_mgr.encode_cmd = encode_cmd;
-
-proto_mgr.reg_buf_decoder = reg_buf_decoder;
-proto_mgr.reg_buf_encoder = reg_buf_encoder;
 module.exports = proto_mgr;

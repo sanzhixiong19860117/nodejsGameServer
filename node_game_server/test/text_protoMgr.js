@@ -1,5 +1,4 @@
 const log = require("../uitls/log");
-const netbus = require("../netbus/netbus");
 const proto_mgr = require("../netbus/proto_mgr");
 
 
@@ -8,11 +7,11 @@ let data = {
     upasd:"123456",
 };
 
-let json = proto_mgr.encode_cmd(netbus.PROTO_JSON,1,1,data);
+let json = proto_mgr.encode_cmd(proto_mgr.PROTO_JSON,1,1,data);
 log.info(json)
 log.error("length = ",json.length);
 
-let json_str = proto_mgr.decode_cmd(netbus.PROTO_JSON,json);
+let json_str = proto_mgr.decode_cmd(proto_mgr.PROTO_JSON,json);
 log.info(json_str);
 
 //二进制 打包
@@ -69,8 +68,8 @@ function decode_cmd_1_1(cmd_buf){
 proto_mgr.reg_buf_encoder(1,1,encode_cmd_1_1);
 proto_mgr.reg_buf_decoder(1,1,decode_cmd_1_1);
 
-let proto_cmd_buf = proto_mgr.encode_cmd(netbus.PROTO_BUF,1,1,data);
+let proto_cmd_buf = proto_mgr.encode_cmd(proto_mgr.PROTO_BUF,1,1,data);
 log.info(proto_cmd_buf);
 log.error(proto_cmd_buf.length);
-cmd = proto_mgr.decode_cmd(netbus.PROTO_BUF,proto_cmd_buf);
+cmd = proto_mgr.decode_cmd(proto_mgr.PROTO_BUF,proto_cmd_buf);
 log.info(cmd);

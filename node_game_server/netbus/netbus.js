@@ -4,6 +4,8 @@ const ws = require("ws");
 
 const log = require("../uitls/log");//加载log文件
 const tcppkg = require("./tcppkg");
+
+const proto_mgr = require("./proto_mgr");
 //====end=======
 
 //用户列表信息
@@ -12,11 +14,6 @@ let global_session_list = {};
 let gloabl_session_key = 1;
 //end
 
-//这里两个数据格式
-let netbus = {
-    PROTO_JSON:1,
-    PROTO_BUF:2
-}
 
 //离开事件
 function on_session_exit(session) {
@@ -121,7 +118,7 @@ function add_client_session_event(session,proto_type) {
             let cmd_buf;
 
             //如果是完整包
-            if(session.proto_type == netbus.PROTO_JSON){
+            if(session.proto_type == proto_mgr.PROTO_JSON){
                 let json_str = last_pkg.toString("utf8",offset+2,offset+pkg_len);
                 if(!json_str){
                     session_close();
@@ -211,7 +208,7 @@ function ws_add_client_session_event(session,proto_type){
     //获得数据
     session.on("message",(data)=>{
         //判断是否是json
-        if(session.proto_type == netbus.PROTO_JSON){
+        if(session.proto_type == proto_mgr.PROTO_JSON){
             if(!isString(data)){
                 session_close(session);
                 return;
@@ -254,9 +251,12 @@ function start_ws_server(ip,port,proto_type) {
 }
 //end
 
-netbus.start_tcp_server = start_tcp_server;
-netbus.start_ws_server = start_ws_server;
-netbus.session_send = session_send;
-netbus.session_close = session_close;
+//导出对应的方法
+const netbus = {
+    start_tcp_server : start_tcp_server,
+    start_ws_server : start_ws_server,
+    session_send : session_send,
+    session_close : session_close,
+};
 
 module.exports = netbus;
