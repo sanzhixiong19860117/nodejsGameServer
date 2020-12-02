@@ -40,7 +40,7 @@ function on_rev_clinet_cmd(session,str_or_buf){
 function on_client_lost_connect(session){
     //在注册模块里面寻找是否存在
     for(let key in service_modules){
-        service_modules[key].on_client_lost_connect(session);
+        service_modules[key].on_player_discommect(session);
     }
 }
 

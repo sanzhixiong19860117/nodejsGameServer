@@ -57,9 +57,14 @@ function on_session_enter(session,proto_type,is_ws){
         log.info("session enter",session.remoteAddress,session.remotePort);
     }
 
-    session.last_pkg = null;//我们已经存储了
+    session.last_pkg = null;                //我们已经存储了
     session.is_ws = is_ws;
-    session.proto_type = proto_type;
+    session.proto_type = proto_type;        //用户进入游戏使用的方式
+    session.is_connected = true;            //使用是否在列表中
+
+    session.send_encoded_cmd = seesion_send_eccode_cmd;
+    session.send_cmd = seesion_send_cmd;
+
     //加入到列表中
     global_session_list[gloabl_session_key] = session;
     session.session_key = gloabl_session_key;
@@ -257,11 +262,38 @@ function start_ws_server(ip,port,proto_type) {
 }
 //end
 
+//2020-12-2 session扩展两个发送函数 这样的话，只要有session就可以发送数据
+function seesion_send_eccode_cmd(cmd){
+    //判断你是否在线
+    if(!this.is_connected){
+        return;
+    }
+    //判断是否是json
+    if(!this.is_ws){
+        let data = tcppkg.package_data(cmd);
+        this.write(data);
+        return;
+    }else{
+        this.send(cmd);
+    }
+}
+
+//2020-12-2 session扩展函数发送数据
+function seesion_send_cmd(stype,ctype,body){
+    if(!this.is_connected){
+        return;
+    }
+    //进行编码操作
+    let cmd = proto_mgr.encode_cmd(this.proto_type,stype,ctype,body);
+    if(cmd){
+        this.send_encoded_cmd(cmd);
+    }
+}
+
 //导出对应的方法
 const netbus = {
     start_tcp_server : start_tcp_server,
     start_ws_server : start_ws_server,
-    session_send : session_send,
     session_close : session_close,
 };
 

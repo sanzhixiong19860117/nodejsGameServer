@@ -2,7 +2,7 @@
 
 const log = require("../uitls/log.js");     //log
 
-require("./talk_room_proto");
+require("../netbus/talk_room_proto.js");
 
 let service = {
     type:1,

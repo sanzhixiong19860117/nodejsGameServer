@@ -1,7 +1,7 @@
 const netbus = require("../netbus/netbus.js");
 const proto_mgr = require("../netbus/proto_mgr.js");
 const service_mgr = require("../netbus/service_mgr");
-const talk_room = require("./text_talk_room.js");
+const talk_room = require("../netbus/module/talk_room");
 
 
 netbus.start_tcp_server("127.0.0.1", 6080, proto_mgr.PROTO_BUF);
