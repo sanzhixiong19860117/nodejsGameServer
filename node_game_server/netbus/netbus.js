@@ -44,7 +44,7 @@ function session_close(session){
 //解析事件
 function on_session_recv_cmd(session,str_or_buf){
     log.info(str_or_buf);
-    if(!service_mgr.on_rev_clinet_cmd(session,str_or_buf)){
+    if(!service_mgr.on_recv_client_cmd(session,str_or_buf)){
         session_close(session);
     }
 }
@@ -220,20 +220,11 @@ function ws_add_client_session_event(session,proto_type,is_encrypt){
     //获得数据
     session.on("message",(data)=>{
         //判断是否是json
-        if(session.proto_type == proto_mgr.PROTO_JSON){
-            if(!isString(data)){
-                session_close(session);
-                return;
-            }
-            on_session_recv_cmd(session,data);
+        if(!Buffer.isBuffer(data)){
+            session_close(session);
+            return;
         }
-        else{
-            if(!Buffer.isBuffer(data)){
-                session_close(session);
-                return;
-            }
-            on_session_recv_cmd(session,data);
-        }
+        on_session_recv_cmd(session,data);
     });
     on_session_enter(session,proto_type,true,is_encrypt);
 }

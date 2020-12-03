@@ -3,6 +3,7 @@ const proto_mgr = require("../netbus/proto_mgr.js");
 const service_mgr = require("../netbus/service_mgr");
 const talk_room = require("../netbus/module/talk_room");
 const testlog = require("../uitls/testLog");
+require("../init.js");
 
 netbus.start_tcp_server("127.0.0.1", 6080, proto_mgr.PROTO_BUF);
 netbus.start_tcp_server("127.0.0.1", 6081, proto_mgr.PROTO_JSON);

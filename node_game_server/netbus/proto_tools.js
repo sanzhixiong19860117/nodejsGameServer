@@ -1,3 +1,4 @@
+module.exports = proto_tools;
 function read_int8(cmd_buf, offset) {
 	return cmd_buf.readInt8(offset);
 }
@@ -54,8 +55,18 @@ function alloc_buffer(total_len) {
 function write_cmd_header_inbuf(cmd_buf, stype, ctype) {
 	write_int16(cmd_buf, 0, stype);
 	write_int16(cmd_buf, 2, ctype);
+	write_uint32(cmd_buf, 4, 0);
+	
+	return proto_tools.header_size;
+}
 
-	return 4;
+function read_cmd_header_inbuf(cmd_buf) {
+	var cmd = {};
+	cmd[0] = proto_tools.read_int16(cmd_buf, 0);
+	cmd[1] = proto_tools.read_int16(cmd_buf, 1);
+
+	ret = [cmd, proto_tools.header_size];
+	return ret;
 }
 
 function write_str_inbuf(cmd_buf, offset, str, byte_len) {
@@ -87,15 +98,15 @@ function decode_empty_cmd(cmd_buf) {
 }
 
 function encode_empty_cmd(stype, ctype, body) {
-	var cmd_buf = alloc_buffer(4);
+	var cmd_buf = alloc_buffer(proto_tools.header_size);
 	write_cmd_header_inbuf(cmd_buf, stype, ctype);
 	return cmd_buf;
 }
 
 function encode_status_cmd(stype, ctype, status) {
-	var cmd_buf = alloc_buffer(6);
+	var cmd_buf = alloc_buffer(proto_tools.header_size + 2);
 	write_cmd_header_inbuf(cmd_buf, stype, ctype);
-	write_int16(cmd_buf, 4, status);
+	write_int16(cmd_buf, proto_tools.header_size, status);
 
 	return cmd_buf;
 }
@@ -104,14 +115,14 @@ function decode_status_cmd(cmd_buf) {
 	var cmd = {};
 	cmd[0] = read_int16(cmd_buf, 0);
 	cmd[1] = read_int16(cmd_buf, 2);
-	cmd[2] = read_int16(cmd_buf, 4);
+	cmd[2] = read_int16(cmd_buf, proto_tools.header_size);
 
 	return cmd;
 }
 
 function encode_str_cmd(stype, ctype, str) {
 	var byte_len = str.utf8_byte_len();
-	var total_len = 2 + 2 + 2 + byte_len;
+	var total_len =proto_tools.header_size + 2 + byte_len;
 	var cmd_buf = alloc_buffer(total_len);
 
 	var offset = write_cmd_header_inbuf(cmd_buf, stype, ctype);
@@ -125,13 +136,14 @@ function decode_str_cmd(cmd_buf) {
 	cmd[0] = read_int16(cmd_buf, 0);
 	cmd[1] = read_int16(cmd_buf, 2);
 
-	var ret = read_str_inbuf(cmd_buf, 4);
+	var ret = read_str_inbuf(cmd_buf, proto_tools.header_size);
 	cmd[2] = ret[0];
 
 	return cmd;
 }
 
 var proto_tools = {
+	header_size: 8, // 2 + 2 + 4;
 	// 原操作
 	read_int8: read_int8,
 	write_int8: write_int8,
