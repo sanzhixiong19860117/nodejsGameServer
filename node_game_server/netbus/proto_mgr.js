@@ -9,16 +9,47 @@ const proto_mgr = {
     decode_cmd : decode_cmd,
     encode_cmd : encode_cmd,
 
+    decrypt_cmd:decrypt_cmd,
+    encrypt_cmd:encrypt_cmd,
+
     reg_buf_decoder : reg_buf_decoder,
     reg_buf_encoder : reg_buf_encoder,
+
+    decode_cmd_header:decode_cmd_header,
 };//表
 
 const decoders = {};//解码集合
 const encoders = {};//编码结合
 
+//解密
+function decrypt_cmd(str_of_buf){
+    log.info("decrypt_cmd");
+    return str_of_buf;
+}
+
+//加密
+function encrypt_cmd(str_of_buf){
+    log.info("encrypt_cmd");
+    return str_of_buf;
+}
+
 //key的操作
 function get_key(stype,ctype){
     return stype*65535 + ctype;
+}
+
+//解析头
+function decode_cmd_header(proto_type,str_or_buf){
+    
+    let cmd = {};
+    if(proto_type == proto_mgr.PROTO_JSON){
+        let json_cmd = _json_decode(str_or_buf);
+        log.info("decode_cmd_header",json_cmd);
+        cmd[0] = json_cmd[0];
+        cmd[1] = json_cmd[1];//解析头
+    }
+    
+    return cmd;
 }
 
 //json打包操作

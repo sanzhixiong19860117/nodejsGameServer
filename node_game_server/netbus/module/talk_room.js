@@ -112,7 +112,7 @@ let service = {
     },
 
     //每个服务器收到消息调用
-    on_rev_player_cmd:function(session,ctype,body){
+    on_rev_player_cmd:function(session,ctype,body,raw_cmd){
         switch (ctype) {
             case net_treaty.talk.talkCmd.Enter:
                 on_user_enter_talkroom(session,body);    

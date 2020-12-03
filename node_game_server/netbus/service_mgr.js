@@ -2,6 +2,7 @@
 //导入
 const log = require("../uitls/log.js");
 const poto_mgr = require("../netbus/proto_mgr.js");
+const proto_mgr = require("../netbus/proto_mgr.js");
 
 const service_modules = {};//模块对象
 
@@ -16,23 +17,41 @@ function register_service(stype,service){
 
 //命令解析
 function on_rev_clinet_cmd(session,str_or_buf){
-    //根据我们的制定解码
-    let cmd = poto_mgr.decode_cmd(session.proto_type,str_or_buf);
-    if(!cmd){
-        return false;
+    //需要加密
+    if(session.is_encrypt){
+        str_or_buf = proto_mgr.encrypt_cmd(str_or_buf);
     }
 
     let stype,ctype,body;
+    var cmd = proto_mgr.decode_cmd_header(session.proto_type,str_or_buf);
+    if(!cmd){
+        return false;
+    }
+    
+    log.error("stype=",cmd[0])
+
     stype = cmd[0];
     ctype = cmd[1];
-    body = cmd[2];
 
-    //查看模块是否注册
+    
     if(!service_modules[stype]){
         return false;
     }
 
-    service_modules[stype].on_rev_player_cmd(session,ctype,body);
+    if(service_modules[stype].is_transfer){
+        service_modules[stype].on_rev_player_cmd(seesion,ctype,null,str_or_buf);
+        return true;
+    }
+    //end
+
+    //根据我们的制定解码
+    var cmd = poto_mgr.decode_cmd(session.proto_type,str_or_buf);
+    if(!cmd){
+        return false;
+    }
+
+    body = cmd[2];
+    service_modules[stype].on_rev_player_cmd(session,ctype,body,str_or_buf);
     return true;
 }
 

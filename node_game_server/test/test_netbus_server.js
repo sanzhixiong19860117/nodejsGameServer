@@ -6,7 +6,7 @@ const talk_room = require("../netbus/module/talk_room");
 
 netbus.start_tcp_server("127.0.0.1", 6080, proto_mgr.PROTO_BUF);
 netbus.start_tcp_server("127.0.0.1", 6081, proto_mgr.PROTO_JSON);
-netbus.start_ws_server("127.0.0.1", 6082, proto_mgr.PROTO_JSON);
-netbus.start_ws_server("127.0.0.1", 6083, proto_mgr.PROTO_BUF);
+netbus.start_ws_server("127.0.0.1", 6082, proto_mgr.PROTO_JSON,false);
+netbus.start_ws_server("127.0.0.1", 6083, proto_mgr.PROTO_BUF,false);
 
 service_mgr.register_service(1,talk_room);

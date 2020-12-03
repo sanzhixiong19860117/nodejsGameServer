@@ -50,7 +50,7 @@ function on_session_recv_cmd(session,str_or_buf){
 }
 
 //有客户端进入
-function on_session_enter(session,proto_type,is_ws){
+function on_session_enter(session,proto_type,is_ws,is_encrypt){
     if(is_ws){
         log.info("session enter",session._socket.remoteAddress,session._socket.remotePort);
     }else{
@@ -61,6 +61,7 @@ function on_session_enter(session,proto_type,is_ws){
     session.is_ws = is_ws;
     session.proto_type = proto_type;        //用户进入游戏使用的方式
     session.is_connected = true;            //使用是否在列表中
+    session.is_encrypt = is_encrypt;        //是否需要解析头
 
     session.send_encoded_cmd = seesion_send_eccode_cmd;
     session.send_cmd = seesion_send_cmd;
@@ -205,7 +206,7 @@ function isString(obj){ //判断对象是否是字符串
 }  
 
 //增加ws的客户端的添加
-function ws_add_client_session_event(session,proto_type){
+function ws_add_client_session_event(session,proto_type,is_encrypt){
     //close事件
     session.on("close",()=>{
         on_session_exit(session);
@@ -234,11 +235,11 @@ function ws_add_client_session_event(session,proto_type){
             on_session_recv_cmd(session,data);
         }
     });
-    on_session_enter(session,proto_type,true);
+    on_session_enter(session,proto_type,true,is_encrypt);
 }
 
 //启动ws操作
-function start_ws_server(ip,port,proto_type) {
+function start_ws_server(ip,port,proto_type,is_encrypt) {
     log.info("start ws server ..", ip, port,proto_type);
 	var server = new ws.Server({
 		host: ip,
@@ -246,7 +247,7 @@ function start_ws_server(ip,port,proto_type) {
 	});
 
 	function on_server_client_comming (client_sock) {
-		ws_add_client_session_event(client_sock, proto_type);
+		ws_add_client_session_event(client_sock, proto_type,is_encrypt);
 	}
 	server.on("connection", on_server_client_comming);
 
@@ -267,6 +268,10 @@ function seesion_send_eccode_cmd(cmd){
     //判断你是否在线
     if(!this.is_connected){
         return;
+    }
+    //判断是否需要解析剩下的
+    if(this.is_encrypt){
+        cmd = proto_mgr.decrypt_cmd(cmd);
     }
     //判断是否是json
     if(!this.is_ws){
