@@ -286,11 +286,137 @@ function seesion_send_cmd(stype,ctype,body){
     }
 }
 
+//连接后台服务器
+function connect_tcp_server(stype,host,port,proto_type,is_encrypt){
+    let session = net.connect({
+        host:host,
+        port:port,
+    });
+
+    session.is_connected = false;
+    session.on("connect",()=>{
+        on_session_connected(stype,session,proto_type,false,is_encrypt);
+    });
+
+    session.on("close",()=>{
+        if(session.is_connected === true){
+            on_session_disconnect(session);
+        }
+        session.end();
+
+        //重连
+        setTimeout(()=>{
+            log.warn("reconnect",stype,host,port,proto_type,is_encrypt);
+            connect_tcp_server(stype,host,port,proto_type,is_encrypt);
+        },3000);
+    });
+
+    session.on("data",(data)=>{
+        // 不合法的数据
+		if (!Buffer.isBuffer(data)) { 
+			session_close(session);
+			return;
+		}
+		// end 
+		var last_pkg = session.last_pkg;
+		if (last_pkg != null) { // 上一次剩余没有处理完的半包;
+			var buf = Buffer.concat([last_pkg, data], last_pkg.length + data.length);
+			last_pkg = buf;
+		}
+		else {
+			last_pkg = data;	
+		}
+
+		var offset = 0;
+		var pkg_len = tcppkg.read_pkg_size(last_pkg, offset);
+		if (pkg_len < 0) {
+			return;
+		}
+
+		while(offset + pkg_len <= last_pkg.length) { // 判断是否有完整的包;
+			// 根据长度信息来读取我们的数据,架设我们穿过来的是文本数据
+			var cmd_buf; 
+			// 收到了一个完整的数据包
+			{
+				cmd_buf = Buffer.allocUnsafe(pkg_len - 2); // 2个长度信息
+				last_pkg.copy(cmd_buf, 0, offset + 2, offset + pkg_len);
+				on_recv_cmd_server_return(session, cmd_buf);	
+			}
+			
+			offset += pkg_len;
+			if (offset >= last_pkg.length) { // 正好我们的包处理完了;
+				break;
+			}
+
+			pkg_len = tcppkg.read_pkg_size(last_pkg, offset);
+			if (pkg_len < 0) {
+				break;
+			}
+		}
+		// 能处理的数据包已经处理完成了,保存 0.几个包的数据
+		if (offset >= last_pkg.length) {
+			last_pkg = null;
+		}
+		else { // offset, length这段数据拷贝到新的Buffer里面
+			var buf = Buffer.allocUnsafe(last_pkg.length - offset);
+			last_pkg.copy(buf, 0, offset, last_pkg.length);
+			last_pkg = buf;
+		}
+		session.last_pkg = last_pkg;
+    });
+
+    session.on("error",(error)=>{
+    });
+}
+
+//seesion成功连接服务器
+const server_connect_list = {};
+function on_session_connected(stype,session,proto_type,is_ws,is_encrypt){
+    if(is_ws){
+        log.info("seesion connect",session._socket.remoteAddress,session._socket.remotePort);
+    }else{
+        log.info("seesion connect",session.remoteAddress,session.remotePort);
+    }
+    session.last_pkg = null;
+    session.is_ws = is_ws;
+    session.proto_type = proto_type;
+    session.is_connected = true;
+    session.is_encrypt = is_encrypt;
+    //扩展
+    session.send_encoded_cmd = seesion_send_eccode_cmd;
+    session.send_cmd = seesion_send_cmd;
+    //end
+    //加入到我们session 列表里面
+    server_connect_list[stype] = session;
+    session.session_key = stype;
+    //end
+}
+
+//退出消息
+function on_recv_cmd_server_return(session,str_or_buf){
+    if(!service_mgr.on_recv_server_return(session,str_or_buf)){
+        session_close(session);
+    }
+}
+
+//离开
+function on_session_disconnect(session){
+    session.is_connected = false;
+    let stype = session.session_key;
+    session.last_pkg = null;
+    session.session_key = null;
+    if(server_connect_list[stype]){
+        server_connect_list[stype] = null;
+        delete server_connect_list[stype];
+    }
+}
+
 //导出对应的方法
 const netbus = {
     start_tcp_server : start_tcp_server,
     start_ws_server : start_ws_server,
     session_close : session_close,
+    connect_tcp_server:connect_tcp_server,
 };
 
 module.exports = netbus;
