@@ -1,23 +1,24 @@
 //对所对应的数据进行解码，编码
 const log = require("../uitls/log");
 const proto_tools = require("../netbus/proto_tools.js");//发送消息的封装
-const { info } = require("console");
 
 //导出表
 const proto_mgr = {
-    PROTO_JSON:1,
-    PROTO_BUF:2,
-    
-    decode_cmd : decode_cmd,
-    encode_cmd : encode_cmd,
+    PROTO_JSON: 1,  
+	PROTO_BUF: 2,
+	// 全局的命令号，当我们的用户丢失链接的时候，
+	// 所有的服务都会收到网关转发过来的这个时间这个消息
+	GW_Disconnect: 10000, 
 
-    decrypt_cmd:decrypt_cmd,
-    encrypt_cmd:encrypt_cmd,
+	encode_cmd: encode_cmd,
+	decode_cmd: decode_cmd,
+	reg_decoder: reg_buf_decoder,
+	reg_encoder: reg_buf_encoder,
 
-    reg_buf_decoder : reg_buf_decoder,
-    reg_buf_encoder : reg_buf_encoder,
+	decrypt_cmd: decrypt_cmd,
+	encrypt_cmd: encrypt_cmd,
 
-    decode_cmd_header:decode_cmd_header,
+	decode_cmd_header: decode_cmd_header,
 };//表
 
 const decoders = {};//解码集合
@@ -41,16 +42,16 @@ function get_key(stype,ctype){
 }
 
 //解析头
-function decode_cmd_header(proto_type,str_or_buf){
-    
+function decode_cmd_header(str_or_buf){
     let cmd = {};
-
     //判断是否数据操作
     if(str_or_buf.length < proto_tools.header_size){
         return null;
     }
     cmd[0] = proto_tools.read_int16(str_or_buf,0);
     cmd[1] = proto_tools.read_int16(str_or_buf,2);
+    cmd[2] = proto_tools.read_int16(str_or_buf,4);
+    cmd[3] = proto_tools.read_int16(str_or_buf,8);
     return cmd;
 }
 
@@ -92,27 +93,25 @@ function _json_decode(cmd_buf){
 //end
 
 //二进制
-function encode_cmd(proto_type,stype,ctype,body){
-    //第一步算总长度
-    let buf = null;
-    if(proto_type == proto_mgr.PROTO_JSON){
-        //如果是json
-        buf = _json_encode(stype,ctype,body);
-        log.info("encode_cmd=",proto_type,buf);
-        return buf;
-    }
-    //获得唯一的key
-    let key = get_key(stype,ctype);
-    if(!encoders[key]){
-        return;
-    }
-    buf = encoders[key](body);
-    return buf;
+function encode_cmd(utag,proto_type,stype,ctype,body){
+    var buf = null;
+	if (proto_type == proto_mgr.PROTO_JSON) {
+		buf = _json_encode(stype, ctype, body);
+	}
+	else { // buf协议
+		var key = get_key(stype, ctype);
+		if (!encoders[key]) {
+			return null;
+		}
+		buf = encoders[key](stype, ctype, body);
+	}
+	proto_tools.write_utag_inbuf(buf, utag);
+	proto_tools.write_prototype_inbuf(buf, proto_type);
+	return buf;
 }
 
 //解码
-function decode_cmd(proto_type,body){
-
+function decode_cmd(proto_type,stype,ctype,body){
     log.info("proto_mgr.decode_cmd=",body)
     //判断数据是否小于整个头字节
     if(body.length < proto_tools.header_size){
@@ -124,8 +123,6 @@ function decode_cmd(proto_type,body){
     }
 
     let buf = null;
-    let stype = proto_tools.read_int16(body,0);//从0开始读取
-    let ctype = proto_tools.read_int16(body,2);//从第二个开始读取
     let key  = get_key(stype,ctype);
         
     //没有找到
@@ -133,7 +130,6 @@ function decode_cmd(proto_type,body){
         return null;
     }
     buf = decoders[key](body)
-    
     return buf;
 }
 

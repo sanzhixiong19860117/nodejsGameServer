@@ -19,8 +19,7 @@ let gloabl_session_key = 1;
 
 //离开事件
 function on_session_exit(session) {
-    //打印一下
-    log.info("session is close");
+    session.is_connected = false;                           //连接断开
     service_mgr.on_client_lost_connect(session);            //离开的时候通知模块
     session.last_pkg = null;                                //记录数据位置为null
     if(global_session_list[session.session_key]){
@@ -50,7 +49,7 @@ function on_session_recv_cmd(session,str_or_buf){
 }
 
 //有客户端进入
-function on_session_enter(session,proto_type,is_ws,is_encrypt){
+function on_session_enter(session,is_ws,is_encrypt){
     if(is_ws){
         log.info("session enter",session._socket.remoteAddress,session._socket.remotePort);
     }else{
@@ -59,7 +58,7 @@ function on_session_enter(session,proto_type,is_ws,is_encrypt){
 
     session.last_pkg = null;                //我们已经存储了
     session.is_ws = is_ws;
-    session.proto_type = proto_type;        //用户进入游戏使用的方式
+
     session.is_connected = true;            //使用是否在列表中
     session.is_encrypt = is_encrypt;        //是否需要解析头
 
@@ -87,7 +86,7 @@ function session_send(session,cmd){
 // 关闭一个session
 function session_close(session) {
     if(!session.is_ws){
-        session.close();
+        session.end();
         return;
     }else{
         session.close();
@@ -96,7 +95,7 @@ function session_close(session) {
 
 //tcp socket部分
 //增加客户端部分
-function add_client_session_event(session,proto_type) {
+function add_client_session_event(session,is_encrypt) {
     //监听服务器的关闭事件
     session.on("close",()=>{
         on_session_exit(session);
@@ -173,14 +172,14 @@ function add_client_session_event(session,proto_type) {
         log.error("error",err);
     });
 
-    on_session_enter(session,proto_type,false);
+    on_session_enter(session,false,is_encrypt);
 }
 
 //启动服务器
-function start_tcp_server(ip,port,proto_type){
+function start_tcp_server(ip,port,is_encrypt){
     log.info("start tcp server..",ip,port);
     let server = net.createServer((client_sock)=>{
-        add_client_session_event(client_sock,proto_type);
+        add_client_session_event(client_sock);
     });
 
     //错误的提示
@@ -206,10 +205,11 @@ function isString(obj){ //判断对象是否是字符串
 }  
 
 //增加ws的客户端的添加
-function ws_add_client_session_event(session,proto_type,is_encrypt){
+function ws_add_client_session_event(session,is_encrypt){
     //close事件
     session.on("close",()=>{
         on_session_exit(session);
+        session.close();
     });
 
     //error
@@ -224,21 +224,21 @@ function ws_add_client_session_event(session,proto_type,is_encrypt){
             session_close(session);
             return;
         }
+
         on_session_recv_cmd(session,data);
     });
-    on_session_enter(session,proto_type,true,is_encrypt);
+    on_session_enter(session,true,is_encrypt);
 }
 
 //启动ws操作
-function start_ws_server(ip,port,proto_type,is_encrypt) {
-    log.info("start ws server ..", ip, port,proto_type);
+function start_ws_server(ip,port,is_encrypt) {
 	var server = new ws.Server({
 		host: ip,
 		port: port,
 	});
 
 	function on_server_client_comming (client_sock) {
-		ws_add_client_session_event(client_sock, proto_type,is_encrypt);
+		ws_add_client_session_event(client_sock,is_encrypt);
 	}
 	server.on("connection", on_server_client_comming);
 
@@ -275,12 +275,12 @@ function seesion_send_eccode_cmd(cmd){
 }
 
 //2020-12-2 session扩展函数发送数据
-function seesion_send_cmd(stype,ctype,body){
+function seesion_send_cmd(stype,ctype,body,utag,proto_type){
     if(!this.is_connected){
         return;
     }
     //进行编码操作
-    let cmd = proto_mgr.encode_cmd(this.proto_type,stype,ctype,body);
+    let cmd = proto_mgr.encode_cmd(utag,proto_type,stype,ctype,body);
     if(cmd){
         this.send_encoded_cmd(cmd);
     }
@@ -411,12 +411,25 @@ function on_session_disconnect(session){
     }
 }
 
+//session成功介入服务器
+function get_server_session(stype){
+    return server_connect_list[stype];
+}
+
+function get_client_session(session_key){
+    return global_session_list[session_key];
+}
+
 //导出对应的方法
 const netbus = {
     start_tcp_server : start_tcp_server,
     start_ws_server : start_ws_server,
     session_close : session_close,
+
+    get_client_session:get_client_session,
+
     connect_tcp_server:connect_tcp_server,
+    get_server_session:get_server_session,
 };
 
 module.exports = netbus;

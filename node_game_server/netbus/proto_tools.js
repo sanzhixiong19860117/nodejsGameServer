@@ -1,4 +1,3 @@
-module.exports = proto_tools;
 function read_int8(cmd_buf, offset) {
 	return cmd_buf.readInt8(offset);
 }
@@ -58,6 +57,18 @@ function write_cmd_header_inbuf(cmd_buf, stype, ctype) {
 	write_uint32(cmd_buf, 4, 0);
 	
 	return proto_tools.header_size;
+}
+
+function write_prototype_inbuf(cmd_buf, proto_type) {
+	write_int16(cmd_buf, 8, proto_type);
+}
+
+function write_utag_inbuf(cmd_buf, utag) {
+	write_int16(cmd_buf, 4, utag);
+}
+
+function clear_utag_inbuf(cmd_buf) {
+	write_int16(cmd_buf, 4, 0);	
 }
 
 function read_cmd_header_inbuf(cmd_buf) {
@@ -143,7 +154,7 @@ function decode_str_cmd(cmd_buf) {
 }
 
 var proto_tools = {
-	header_size: 8, // 2 + 2 + 4;
+	header_size: 10, // 2 + 2 + 4 + 2;
 	// 原操作
 	read_int8: read_int8,
 	write_int8: write_int8,
@@ -164,6 +175,10 @@ var proto_tools = {
 
 	// 通用操作
 	write_cmd_header_inbuf: write_cmd_header_inbuf,
+	write_prototype_inbuf: write_prototype_inbuf,
+	write_utag_inbuf: write_utag_inbuf,
+	clear_utag_inbuf: clear_utag_inbuf,
+	
 	write_str_inbuf: write_str_inbuf,
 	read_str_inbuf: read_str_inbuf,
 	// end

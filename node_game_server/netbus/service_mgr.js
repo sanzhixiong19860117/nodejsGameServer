@@ -1,7 +1,6 @@
 //服务器类
 //导入
 const log = require("../uitls/log.js");
-const poto_mgr = require("../netbus/proto_mgr.js");
 const proto_mgr = require("../netbus/proto_mgr.js");
 
 var service_modules = {};
@@ -12,7 +11,6 @@ function register_service(stype, service) {
 	}
 
 	service_modules[stype] = service;
-	service.init();
 }
 
 function on_recv_client_cmd(session, cmd_buf) {
@@ -20,32 +18,57 @@ function on_recv_client_cmd(session, cmd_buf) {
 	if (session.is_encrypt) {
 		cmd_buf = proto_mgr.decrypt_cmd(cmd_buf);	
 	}
-	var stype, ctype, body;
+	var stype, ctype, body, utag, proto_type;
 
-	var cmd = proto_mgr.decode_cmd_header(session.proto_type, cmd_buf);
+	var cmd = proto_mgr.decode_cmd_header(cmd_buf);
 	if (!cmd) {
 		return false;
 	}
 	stype = cmd[0]; 
-	ctype = cmd[1]; 
+	ctype = cmd[1];
+	utag = cmd[2];
+	proto_type = cmd[3]; 
 	
-	if (!service_modules[stype]) {
-		return false;
-	}
 	if (service_modules[stype].is_transfer) {
-		service_modules[stype].on_rev_player_cmd(session, ctype, null, cmd_buf);
+		service_modules[stype].on_recv_player_cmd(session,stype,ctype,null,utag,proto_type,cmd_buf);
 		return true;
 	}
 
-	var cmd = proto_mgr.decode_cmd(session.proto_type, cmd_buf);
+	var cmd = proto_mgr.decode_cmd(proto_type,stype,ctype,cmd_buf);
 	if (!cmd) {
 		return false;
 	}
 	// end 
 
-	
 	body = cmd[2];
-	service_modules[stype].on_rev_player_cmd(session, ctype, body, cmd_buf);
+	service_modules[stype].on_recv_player_cmd(session,stype,ctype,body,utag,proto_type,cmd_buf);
+	return true;
+}
+
+//服务器的返回
+function on_recv_server_return(session,cmd_buf){
+	//根据我们的收到的解码命令
+	if(session.is_encrypt){
+		cmd_buf = proto_mgr.decrypt_cmd(cmd_buf);
+	}
+	var stype,ctype,body,utag,proto_type;
+	var cmd = proto_mgr.decode_cmd_header(cmd_buf);
+	if(!cmd){
+		return false;
+	}
+	stype = cmd[0];
+	ctype = cmd[1];
+	utag = cmd[2];
+	proto_type = cmd[3];
+
+	if(service_modules[stype].is_transfer){
+		service_modules[stype].on_recv_server_return(session,stype,ctype,null,utag,proto_type,cmd_buf);
+		return true;
+	}
+	//end
+
+	body = cmd[2];
+	service_modules[stype].on_recv_server_return(session,stype,ctype,body,utag,proto_type,cmd_buf);
 	return true;
 }
 
@@ -61,6 +84,7 @@ var service_mgr = {
 	on_client_lost_connect: on_client_lost_connect,
 	on_recv_client_cmd: on_recv_client_cmd,
 	register_service: register_service,
+	on_recv_server_return:on_recv_server_return
 };
 
 module.exports = service_mgr;

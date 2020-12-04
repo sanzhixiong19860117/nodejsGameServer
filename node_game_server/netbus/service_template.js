@@ -4,16 +4,16 @@ const service = {
     name:"service templet",
     is_transfer:false,//是否是转发模块
 
-    //初始化
-    init:function(){
+    //每个服务器收到消息
+    on_rev_player_cmd:function(session,ctype,body,utag,proto_type,raw_cmd){ 
     },
 
-    //每个服务器收到消息
-    on_rev_player_cmd:function(session,ctype,body,raw_cmd){ 
+    //收到我们连接的服务器给我们发过来的数据
+    on_recv_server_return:function(session,ctype,body,utag,proto_type,raw_cmd){    
     },
 
     //每个服务连接丢失后调用
-    on_player_discommect:function(session){},
+    on_player_discommect:function(stype,session){},
 }
 
 module.exports = service;
