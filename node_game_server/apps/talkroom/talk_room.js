@@ -2,6 +2,7 @@
 const log = require("../../uitls/log.js");     //log
 const proto_mgr = require("../../netbus/proto_mgr");
 require("./talk_room_proto.js");
+const Cmd = require("../Cmd.js");
 
 var STYPE_TALKROOM = 1;
 var TalkCmd = {
@@ -155,7 +156,7 @@ var service = {
 				on_user_send_msg(session, body, utag, proto_type);
 			break;
 
-			case proto_man.GW_Disconnect: // 网关转发过来，用户被迫掉线
+			case Cmd.GW_Disconnect: // 网关转发过来，用户被迫掉线
 				on_user_exit_talkroom(session, true, utag, proto_type);
 			break;
 		}
