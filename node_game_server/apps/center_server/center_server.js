@@ -12,11 +12,6 @@ service_mgr.register_service(Stype.Auth,auth_service);
 
 //连接中心数据库
 const mysql_center = require("../../database/mysql_center.js");
-mysql_center.connect(
-    game_config.center_database.host,
-    game_config.center_database.port,
-    game_config.center_database.da_name,
-    game_config.center_database.uname,
-    game_config.center_database.upwd,
-);
+mysql_center.connect();
+//end
 
